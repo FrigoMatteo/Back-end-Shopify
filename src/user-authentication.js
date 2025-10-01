@@ -3,6 +3,7 @@ const crypto = require("crypto");
 const dotenv= require( "dotenv");
 const passport = require("passport");
 const session = require("express-session");
+const MongoStore = require("connect-mongo");
 const LocalStrategy = require("passport-local").Strategy;
 dotenv.config();
 
@@ -22,7 +23,7 @@ const initAuthentication=(app) =>{
 
   passport.use(new LocalStrategy(
     function(username, password, done) {
-      getUser(username, password).then((user) => {     
+      getUser(username, password).then((user) => {   
         return done(null, user);
       }).catch((x)=>{
           console.log("Error passport password access:",x)
@@ -32,6 +33,7 @@ const initAuthentication=(app) =>{
   ));
 
   passport.serializeUser((user, done) => {
+      console.log("Serialize:",user.username)
       done(null, user.username); // Salva solo l’ID nella sessione
   });
   
@@ -46,10 +48,26 @@ const initAuthentication=(app) =>{
     }
   });
 
+  const mongoUrl= `mongodb+srv://${process.env.SESSION_USER}:${process.env.PASS_SESSION}@cluster0.now2bqv.mongodb.net/${process.env.DBNAME}?retryWrites=true&w=majority&appName=Cluster0`;
+
+
+
   app.use(session({
     secret: process.env.SECRET_SESSION,
     resave: false,
-    saveUninitialized: false
+    saveUninitialized: false,
+    store: MongoStore.create({
+      mongoUrl: mongoUrl, // es: mongodb+srv://user:pass@cluster/dbname
+      dbName: process.env.DBNAME,            // il tuo database
+      collectionName: "sessions",
+      ttl: 60 * 2 * 1,  // TTL = 12 ore (in secondi)
+      autoRemove: 'native' // fa pulizia delle sessioni scadute
+    }),
+    cookie: {
+      secure: process.env.NODE_ENV === "production",
+      httpOnly: true,
+      maxAge: 1000 * 60 * 2 * 1 // 12 ore (in ms)
+    }
   }));
 
   // Init passport
@@ -63,7 +81,7 @@ const getUser=async (username, password)=>{
     try{
         await db.connect();
         
-        const database= db.db("hustleProduction");
+        const database= db.db(process.env.DBNAME);
         const collection=database.collection("users");
         const get=await collection.findOne({
             username:username
@@ -101,6 +119,7 @@ const getUser=async (username, password)=>{
 
 
 const isLoggedIn = (req, res, next) => {
+
   if (req.isAuthenticated()) {
     return next();
   }

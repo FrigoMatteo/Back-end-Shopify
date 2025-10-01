@@ -5,6 +5,8 @@ const {check,validationResult}=require('express-validator');
 const dotenv= require( "dotenv");
 const morgan = require('morgan');
 const passport = require('passport');
+
+
 const {initAuthentication,isLoggedIn} = require('./src/user-authentication');
 const {get_orders,get_ordersId,get_products} = require('./src/shopify.js');
 dotenv.config();
@@ -15,7 +17,7 @@ const cors = require('cors');
 
 
 const corsOptions={
-    origin:'*',
+    origin:'http://localhost:5173',
     credentials:true,
 }
 app.use(cors(corsOptions))
@@ -70,7 +72,6 @@ app.post('/api/session/login',
             if (!user){
                 return resp.status(401).json(info)
             }
-            
             req.login(user, (err) =>{
                 
                 if (err) return resp.status(500).json(err);
@@ -83,6 +84,13 @@ app.post('/api/session/login',
 
 });
 
+// Did it already login
+app.get('/api/session/current', (req, res) => {  
+  if(req.isAuthenticated()) {
+    res.status(200).json({username:req.user});
+  }else
+    res.status(401).json({error: 'Unauthenticated user!'});;
+});
 
 // Retrieve own pre-orders
 app.get('/api/orders',isLoggedIn ,(req,resp)=>{
@@ -139,8 +147,14 @@ app.get('/' ,(req,resp)=>{
 
 });
 
-
-// Logout
-app.delete('/api/session/logout', (req,resp)=>{
-    req.logout( ()=> { resp.status(200);resp.end(); } );
+//logout
+app.delete('/api/session/logout', (req, res, next) => {
+  req.logout(err => {
+    if (err) return next(err);
+    req.session.destroy(err => {
+      if (err) return next(err);
+      res.clearCookie("connect.sid"); // cancella il cookie lato client
+      return res.sendStatus(200);
+    });
+  });
 });
