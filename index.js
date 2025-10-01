@@ -133,6 +133,12 @@ app.get('/api/order/:id',isLoggedIn ,(req,resp)=>{
 
 });
 
+app.get('/' ,(req,resp)=>{
+
+  resp.json('Dont tell anyone');
+
+});
+
 
 // Logout
 app.delete('/api/session/logout', (req,resp)=>{
