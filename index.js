@@ -21,7 +21,7 @@ const corsOptions={
 app.use(cors(corsOptions))
 
 // --------------------Init Shopify------------------------------------------------------------------------------------
-const port = 4321;
+const port = 4000 ;
 const shopify = shopifyApi({
   apiKey: process.env.SHOPIFY_API_KEY,
   apiSecretKey: process.env.SHOPIFY_API_SECRET,
