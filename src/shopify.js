@@ -1,5 +1,5 @@
 const get_orders= async (client,user)=>{
-  console.log(user) // Value to insert inside the "search"
+  // Value to insert inside the "search"
 
   try{
     
@@ -101,7 +101,7 @@ const get_products= async (client)=>{
 
 
 const get_ordersId= async (client,user,orderId)=>{
-  console.log(user) // Value to insert inside the "search"
+  // Value to insert inside the "search"
 
   try{
     

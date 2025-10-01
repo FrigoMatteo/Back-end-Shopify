@@ -21,7 +21,7 @@ const corsOptions={
 app.use(cors(corsOptions))
 
 // --------------------Init Shopify------------------------------------------------------------------------------------
-const port = 4000 ;
+const port = 10000;
 const shopify = shopifyApi({
   apiKey: process.env.SHOPIFY_API_KEY,
   apiSecretKey: process.env.SHOPIFY_API_SECRET,
@@ -90,7 +90,6 @@ app.get('/api/orders',isLoggedIn ,(req,resp)=>{
     const data= get_orders(client,req.user);
 
     data.then((x)=>{
-      console.log(x)
 
       resp.json(x);
     }).catch((x)=>{
@@ -107,7 +106,6 @@ app.get('/api/products',isLoggedIn ,(req,resp)=>{
     const data= get_products(client);
 
     data.then((x)=>{
-      console.log(x)
 
       resp.json(x);
     }).catch((x)=>{
@@ -126,7 +124,6 @@ app.get('/api/order/:id',isLoggedIn ,(req,resp)=>{
   const data= get_ordersId(client,req.user,orderId);
 
   data.then((x)=>{
-    console.log(x)
 
     resp.json(x);
   }).catch((x)=>{
