@@ -17,9 +17,7 @@ const cors = require('cors');
 
 
 app.use(cors({
-  origin: function(origin, callback){
-    callback(null, origin); // permette l’origine della richiesta
-  },
+  origin: "https://hustleproductioncallmanagement.onrender.com",
   credentials: true
 }));
 //app.use(cors(corsOptions))
