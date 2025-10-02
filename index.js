@@ -17,9 +17,10 @@ const cors = require('cors');
 
 
 app.use(cors({
-  origin: "https://hustleproductioncallmanagement.onrender.com",
+  origin: "https://hustleproductioncallmanagement.onrender.com/",
   credentials: true
 }));
+
 //app.use(cors(corsOptions))
 
 // --------------------Init Shopify------------------------------------------------------------------------------------
@@ -42,7 +43,7 @@ app.listen(port, (err) => {
   if (err)
     console.log(err);
   else 
-    console.log(`Server listening at http://localhost:${port}`);
+    console.log(`Server listening at ${port}`);
 }); 
 
 // Initialize session
@@ -74,9 +75,15 @@ app.post('/api/session/login',
             }
             req.login(user, (err) =>{
                 
-                if (err) return resp.status(500).json(err);
+                req.session.save((err) => {
+                  if (err) {
+                    console.error("Errore salvataggio sessione:", err);
+                    return resp.status(500).json({ error: "Session save failed" });
+                  }
 
-                return resp.json({username:user.username})
+                  console.log("Sessione salvata correttamente, cookie dovrebbe essere inviato");
+                  return resp.json({ username: user.username });
+                });
             });
         }
             
