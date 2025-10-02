@@ -17,7 +17,7 @@ const cors = require('cors');
 
 
 app.use(cors({
-  origin: "https://hustleproductioncallmanagement.onrender.com/",
+  origin: "https://hustleproductioncallmanagement.onrender.com",
   credentials: true
 }));
 
