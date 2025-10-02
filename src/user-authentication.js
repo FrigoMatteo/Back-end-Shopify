@@ -66,7 +66,6 @@ const initAuthentication=(app) =>{
     cookie: {
       secure: process.env.NODE_ENV === "production",
       httpOnly: true,
-      sameSite: "none",
       maxAge: 1000 * 60 * 2 * 1 // 12 ore (in ms)
     }
   }));
