@@ -67,6 +67,7 @@ const initAuthentication=(app) =>{
       secure: process.env.NODE_ENV === "production",
       httpOnly: true,
       sameSite:process.env.NODE_ENV === "production" ? "none" : "lax",
+      domain: 'backendshopifyhustleproduction.onrender.com',
       maxAge: 1000 * 60 * 60 * 12 // 12 ore (in ms)
     }
   }));
