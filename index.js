@@ -17,7 +17,7 @@ const cors = require('cors');
 
 
 const allowedOrigins = [
-  "https://front-end-shopify.vercel.app/", // produzione
+  "https://front-end-shopify.vercel.app", // produzione
   "http://localhost:10001"                                 // sviluppo
 ];
 
