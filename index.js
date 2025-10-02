@@ -16,11 +16,13 @@ app.use(morgan('dev'));
 const cors = require('cors');
 
 
-const corsOptions={
-    origin:'http://localhost:5173',
-    credentials:true,
-}
-app.use(cors(corsOptions))
+app.use(cors({
+  origin: function(origin, callback){
+    callback(null, origin); // permette l’origine della richiesta
+  },
+  credentials: true
+}));
+//app.use(cors(corsOptions))
 
 // --------------------Init Shopify------------------------------------------------------------------------------------
 const port = 10000;

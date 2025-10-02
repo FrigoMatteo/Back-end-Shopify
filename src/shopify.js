@@ -31,6 +31,127 @@ const get_orders= async (client,user)=>{
 
 }
 
+
+const create_clients = async (client, createClient) => {
+  try {
+    const mutation = `
+      mutation customerCreate($input: CustomerInput!) {
+        customerCreate(input: $input) {
+          userErrors {
+            field
+            message
+          }
+          customer {
+            id
+            email
+            phone
+            taxExempt
+            firstName
+            lastName
+            amountSpent {
+              amount
+              currencyCode
+            }
+            smsMarketingConsent {
+              marketingState
+              marketingOptInLevel
+              consentUpdatedAt
+            }
+          }
+        }
+      }`;
+
+    const variables = {
+      input: {
+        email: "steve.lastnameson@example.com",
+        phone: "+16465555555",
+        firstName: "Steve",
+        smsMarketingConsent: {
+          marketingState: "SUBSCRIBED",
+          marketingOptInLevel: "SINGLE_OPT_IN"
+        }
+      }
+    };
+
+    const response = await client.request(mutation, { variables });
+
+    return response.customerCreate;
+
+  } catch (err) {
+    console.log(err);
+    return { error: "Cannot create client" };
+  }
+};
+
+const get_clients=async(client)=>{
+  try{
+    const QUERY =
+     `query CustomerList($first:Int!) {
+      customers(first: $first) {
+        nodes {
+          id
+          firstName
+          lastName
+          defaultEmailAddress {
+            emailAddress
+            marketingState
+          }
+          defaultPhoneNumber {
+            phoneNumber
+            marketingState
+            marketingCollectedFrom
+          }
+          createdAt
+          updatedAt
+          numberOfOrders
+          state
+          amountSpent {
+            amount
+            currencyCode
+          }
+          verifiedEmail
+          taxExempt
+          tags
+          addresses {
+            id
+            firstName
+            lastName
+            address1
+            city
+            province
+            country
+            zip
+            phone
+            name
+            provinceCode
+            countryCodeV2
+          }
+          defaultAddress {
+            id
+            address1
+            city
+            province
+            country
+            zip
+            phone
+            provinceCode
+            countryCodeV2
+          }
+        }
+      }
+    }`;
+
+  const response = await client.request(QUERY, {
+    variables: {first: 250 }
+  });
+  return response.data;
+
+  }catch(err){
+    console.log(err)
+    return {error:"Cannot get clients"}
+  }
+}
+
 /*
 const QUERY = `
       query getDraftOrders($search: String!, $first: Int!) {
