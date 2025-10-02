@@ -53,6 +53,7 @@ const initAuthentication=(app) =>{
 
 
   app.use(session({
+    proxy : true,
     secret: process.env.SECRET_SESSION,
     resave: false,
     saveUninitialized: false,
