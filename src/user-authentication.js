@@ -60,13 +60,13 @@ const initAuthentication=(app) =>{
       mongoUrl: mongoUrl, // es: mongodb+srv://user:pass@cluster/dbname
       dbName: process.env.DBNAME,            // il tuo database
       collectionName: "sessions",
-      ttl: 60 * 2 * 1,  // TTL = 12 ore (in secondi)
+      ttl: 60 * 60 * 12,  // TTL = 12 ore (in secondi)
       autoRemove: 'native' // fa pulizia delle sessioni scadute
     }),
     cookie: {
       secure: process.env.NODE_ENV === "production",
       httpOnly: true,
-      maxAge: 1000 * 60 * 2 * 1 // 12 ore (in ms)
+      maxAge: 1000 * 60 * 60 * 12 // 12 ore (in ms)
     }
   }));
 
