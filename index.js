@@ -16,10 +16,29 @@ app.use(morgan('dev'));
 const cors = require('cors');
 
 
+const allowedOrigins = [
+  "https://front-end-shopify.vercel.app/", // produzione
+  "http://localhost:10001"                                 // sviluppo
+];
+
+app.use(cors({
+  origin: function (origin, callback) {
+    // Permetti richieste senza origin (come Postman) o che siano nella lista
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error("Origin non permesso"));
+    }
+  },
+  credentials: true
+}));
+
+/*
 app.use(cors({
   origin: "https://hustleproductioncallmanagement.onrender.com",
   credentials: true
 }));
+*/
 
 //app.use(cors(corsOptions))
 
