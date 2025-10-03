@@ -17,7 +17,7 @@ const cors = require('cors');
 
 
 const allowedOrigins = [
-  "https://front-end-shopify.vercel.app", // produzione
+  "https://hustleproductioncallmanagement.vercel.app", // produzione
   "http://localhost:10001",
   "https://hustleproductioncallmanagement.onrender.com",
   "http://localhost:5173"
