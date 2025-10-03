@@ -8,7 +8,7 @@ const passport = require('passport');
 
 
 const {initAuthentication,isLoggedIn} = require('./src/user-authentication');
-const {get_orders,get_ordersId,get_products} = require('./src/shopify.js');
+const {get_orders,get_ordersId,get_products,get_clients} = require('./src/shopify.js');
 dotenv.config();
 const app = express();
 app.use(express.json());
@@ -19,7 +19,8 @@ const cors = require('cors');
 const allowedOrigins = [
   "https://front-end-shopify.vercel.app", // produzione
   "http://localhost:10001",
-  "https://hustleproductioncallmanagement.onrender.com"
+  "https://hustleproductioncallmanagement.onrender.com",
+  "http://localhost:5173"
 ];
 
 app.use(cors({
@@ -123,6 +124,21 @@ app.get('/api/session/current', (req, res) => {
 app.get('/api/orders',isLoggedIn ,(req,resp)=>{
 
     const data= get_orders(client,req.user);
+
+    data.then((x)=>{
+
+      resp.json(x);
+    }).catch((x)=>{
+      console.log("Error retrieving")
+      resp.status(500).json(x);
+    })
+
+});
+
+// Retrieve clients
+app.get('/api/clients',isLoggedIn ,(req,resp)=>{
+
+    const data= get_clients(client);
 
     data.then((x)=>{
 

@@ -1,10 +1,35 @@
+let totalQueryCost = 0;
+
+const get_Cost_per_call = (response) => {
+  if (response.extensions && response.extensions.cost) {
+    const cost = response.extensions.cost;
+
+    /*
+    console.log("Requested Query Cost:", cost.requestedQueryCost);
+    console.log("Actual Query Cost:", cost.actualQueryCost);
+    console.log("Throttle Status:", cost.throttleStatus);
+    console.log(`Currently Available: ${cost.throttleStatus.currentlyAvailable}`);
+    console.log(`Maximum Available: ${cost.throttleStatus.maximumAvailable}`);
+    console.log(`Restore Rate: ${cost.throttleStatus.restoreRate} per second`);
+    */
+
+    // Aggiorno il totale accumulato
+    totalQueryCost += cost.actualQueryCost;
+
+    console.log(`Costo totale accumulato fino ad ora: ${totalQueryCost}`);
+  } else {
+    console.log("Nessuna informazione sul costo trovata.");
+  }
+};
+
+
 const get_orders= async (client,user)=>{
   // Value to insert inside the "search"
 
   try{
     
     const QUERY = `
-      query getDraftOrders( $first: Int!) {
+      query getDraftOrders($first: Int!) {
         draftOrders(first: $first, reverse: true) {
           edges {
             node {
@@ -12,16 +37,47 @@ const get_orders= async (client,user)=>{
               name
               status
               tags
+              createdAt
+              customer {
+                id
+                displayName
+                email
+                phone
+              }
+
+              lineItems(first: 20) {
+                edges {
+                  node {
+                    id
+                    quantity
+                    originalUnitPriceSet {
+                      shopMoney {
+                        amount
+                      }
+                    }
+                    title
+                    variant {
+                      id
+                      title
+                      product {
+                        id
+                        title
+                      }
+                    }
+                  }
+                }
+              }
             }
           }
         }
       }
     `;
-
     const response = await client.request(QUERY, {
       variables: {first: 20 }
       //variables: { search: user, first: 50 }
     });
+
+    get_Cost_per_call(response)
     return response.data;
 
   }catch(err){
@@ -83,49 +139,21 @@ const create_clients = async (client, createClient) => {
   }
 };
 
+
 const get_clients=async(client)=>{
   try{
     const QUERY =
-     `query CustomerList($first:Int!) {
-      customers(first: $first) {
-        nodes {
+    `query CustomerList($first: Int!, $after: String) {
+    customers(first: $first, after: $after) {
+      edges {
+        cursor
+        node {
           id
-          firstName
-          lastName
+          displayName
           defaultEmailAddress {
             emailAddress
-            marketingState
-          }
-          defaultPhoneNumber {
-            phoneNumber
-            marketingState
-            marketingCollectedFrom
-          }
-          createdAt
-          updatedAt
-          numberOfOrders
-          state
-          amountSpent {
-            amount
-            currencyCode
           }
           verifiedEmail
-          taxExempt
-          tags
-          addresses {
-            id
-            firstName
-            lastName
-            address1
-            city
-            province
-            country
-            zip
-            phone
-            name
-            provinceCode
-            countryCodeV2
-          }
           defaultAddress {
             id
             address1
@@ -139,12 +167,34 @@ const get_clients=async(client)=>{
           }
         }
       }
-    }`;
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+    }
+  }`;
 
-  const response = await client.request(QUERY, {
-    variables: {first: 250 }
-  });
-  return response.data;
+  let hasNextPage = true;
+  let after = undefined;
+  let allCustomers = [];
+
+  while (hasNextPage) {
+    const response = await client.request(QUERY, {
+      variables: { first: 250, after }
+    });
+
+    get_Cost_per_call(response)
+
+    const { edges, pageInfo } = response.data.customers;
+    if (!edges || edges.length === 0) break;
+
+    allCustomers.push(...edges.map(edge => edge.node));
+
+    hasNextPage = pageInfo.hasNextPage;
+    after = pageInfo.endCursor;
+  }
+
+  return allCustomers;
 
   }catch(err){
     console.log(err)
@@ -152,51 +202,36 @@ const get_clients=async(client)=>{
   }
 }
 
-/*
-const QUERY = `
-      query getDraftOrders($search: String!, $first: Int!) {
-        draftOrders(first: $first, query: $search) {
-          edges {
-            node {
-              id
-              name
-              status
-              tags
-              customer {
-                id
-                displayName
-                email
-              }
-            }
-          }
-        }
-      }
-    `;
-*/
-
-
+// --------------------------------------------------------------------------------------------------------------------
+// Consideriamo solo una viriante per prodotto, non multipli a prodotto
+// --------------------------------------------------------------------------------------------------------------------
 const get_products= async (client)=>{
   
   try{
     
     const QUERY = `
-      query products( $first: Int!) {
+      query products($first: Int!) {
         products(first: $first, reverse: true) {
           nodes {
             id
             title
             status
+
             variants(first: 1) {
               nodes {
                 id
-                inventoryQuantity   
+                inventoryQuantity
                 price
               }
             }
-            images(first: 1) { 
+
+            media(first: 1) {
               nodes {
-                originalSrc      
-                altText
+                preview {
+                  image {
+                    url
+                  }
+                } 
               }
             }
           }
@@ -207,6 +242,9 @@ const get_products= async (client)=>{
     const response = await client.request(QUERY, {
       variables: {first: 250 }
     });
+
+    get_Cost_per_call(response)
+
     return response.data;
 
   }catch(err){
@@ -372,4 +410,4 @@ const test_insert= async ()=>{
 }
 
 
-module.exports = {get_products,get_orders,get_ordersId};
+module.exports = {get_products,get_orders,get_ordersId, get_clients};
