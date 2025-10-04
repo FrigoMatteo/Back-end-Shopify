@@ -8,12 +8,13 @@ const passport = require('passport');
 
 
 const {initAuthentication,isLoggedIn} = require('./src/user-authentication');
-const {get_orders,get_ordersId,get_products,get_clients} = require('./src/shopify.js');
+const {get_orders,get_products,get_clients,create_clients, create_order} = require('./src/shopify.js');
 dotenv.config();
 const app = express();
 app.use(express.json());
 app.use(morgan('dev'));
 const cors = require('cors');
+app.use(express.urlencoded({ extended: true }));
 
 
 const allowedOrigins = [
@@ -135,6 +136,39 @@ app.get('/api/orders',isLoggedIn ,(req,resp)=>{
 
 });
 
+// Create a client
+app.post('/api/create/client',isLoggedIn ,(req,resp)=>{
+
+    const { customer } = req.body;
+    const data= create_clients(client,customer,req.user);
+
+    data.then((x)=>{
+
+      resp.json(x);
+    }).catch((x)=>{
+      console.log("Error creating")
+      resp.status(500).json(x);
+    })
+
+});
+
+// Create a draftOrder
+app.post('/api/create/draftOrder',isLoggedIn ,(req,resp)=>{
+
+    const draftOrder=""
+    const data= create_order(client,draftOrder,req.user);
+
+    data.then((x)=>{
+
+      resp.json(x);
+    }).catch((x)=>{
+      console.log("Error creating")
+      resp.status(500).json(x);
+    })
+
+});
+
+
 // Retrieve clients
 app.get('/api/clients',isLoggedIn ,(req,resp)=>{
 
@@ -163,24 +197,6 @@ app.get('/api/products',isLoggedIn ,(req,resp)=>{
       console.log("Error retrieving")
       resp.status(500).json(x);
     })
-
-});
-
-
-// Retrieve specific id pre-orders
-app.get('/api/order/:id',isLoggedIn ,(req,resp)=>{
-
-  const orderId = req.params.id;
-
-  const data= get_ordersId(client,req.user,orderId);
-
-  data.then((x)=>{
-
-    resp.json(x);
-  }).catch((x)=>{
-    console.log("Error retrieving")
-    resp.status(500).json(x);
-  })
 
 });
 

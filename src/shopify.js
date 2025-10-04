@@ -88,8 +88,38 @@ const get_orders= async (client,user)=>{
 }
 
 
-const create_clients = async (client, createClient) => {
+const create_clients = async (client, createClient,user) => {
   try {
+    if (!user){
+      return {error:"Problema con sessione. Contatta l'amministratore"};
+    }
+
+    const CUSTOMER_SEARCH = `
+      query customerByEmail($query: String!) {
+        customers(first: 1, query: $query) {
+          edges {
+            node {
+              id
+              email
+              firstName
+              lastName
+            }
+          }
+        }
+      }
+      `;
+
+    const check = await client.request(CUSTOMER_SEARCH, {
+      variables: { query: `email:${createClient.email}`}
+    });
+
+    const existingCustomer = check.data.customers.edges[0]?.node;
+
+    if (existingCustomer) {
+      return {error:"Cliente già esistente"}
+    }
+
+
     const mutation = `
       mutation customerCreate($input: CustomerInput!) {
         customerCreate(input: $input) {
@@ -100,38 +130,62 @@ const create_clients = async (client, createClient) => {
           customer {
             id
             email
-            phone
-            taxExempt
             firstName
             lastName
-            amountSpent {
-              amount
-              currencyCode
-            }
-            smsMarketingConsent {
-              marketingState
-              marketingOptInLevel
-              consentUpdatedAt
+            note 
+            addresses {
+              id
+              address1
+              city
+              zip
+              province
+              country
             }
           }
         }
-      }`;
+      }
+    `;
+
+    // Phone number ex:"+39333111222"
+    // country example: "IT"
 
     const variables = {
       input: {
-        email: "steve.lastnameson@example.com",
-        phone: "+16465555555",
-        firstName: "Steve",
-        smsMarketingConsent: {
-          marketingState: "SUBSCRIBED",
-          marketingOptInLevel: "SINGLE_OPT_IN"
-        }
+        firstName: createClient.name,
+        lastName: createClient.surname,
+        email: createClient.email,
+        phone: createClient.phone,
+        tags: ["TEST DEVELOPMENT",user],
+        note:`Creato attraverso API dall'utente - ${user}`,
+        addresses: [
+          {
+            firstName: createClient.name,
+            lastName: createClient.surname,
+            company: createClient.company,
+            address1: createClient.address,
+            address2: createClient.fiscalCode,
+            city: createClient.city,
+            province: createClient.province,
+            zip: createClient.postalCode,
+            country: createClient.country,
+            phone: createClient.phone
+          }
+        ]
       }
     };
 
+    return {error:"Blocked"}
+
     const response = await client.request(mutation, { variables });
 
-    return response.customerCreate;
+    if (response.data.customerCreate.userErrors.length > 0) {
+      console.log("Errori:", response.data.customerCreate.userErrors);
+      return { error: "Errore compilazione dati. Se persiste contattare amministratore" };
+    }
+    console.log(response.data.customerCreate)
+
+    get_Cost_per_call(response)
+    return response.data.customerCreate.customer;
 
   } catch (err) {
     console.log(err);
@@ -144,7 +198,7 @@ const get_clients=async(client)=>{
   try{
     const QUERY =
     `query CustomerList($first: Int!, $after: String) {
-    customers(first: $first, after: $after) {
+    customers(first: $first, after: $after,reverse: true) {
       edges {
         cursor
         node {
@@ -157,6 +211,8 @@ const get_clients=async(client)=>{
           defaultAddress {
             id
             address1
+            address2
+            company
             city
             province
             country
@@ -256,158 +312,148 @@ const get_products= async (client)=>{
 
 
 
-
-
-
-const get_ordersId= async (client,user,orderId)=>{
-  // Value to insert inside the "search"
-
-  try{
-    
-    const QUERY = `
-      query getDraftOrder($id: ID!) {
-        draftOrder(id: $id) {
-          id
-          name
-          status
-          createdAt
-          tags
-          email
-          invoiceUrl
-          totalPrice
-          subtotalPrice
-          completedAt
-
-
-          billingAddress {
-            address1
-            address2
-            city
-            country
-            zip
-            province
-            firstName
-            lastName
+// Create draftOrder
+const create_order= async (client, draftOrder,user)=>{
+  try {
+    const MUTATION = `
+      mutation draftOrderCreate($input: DraftOrderInput!) {
+        draftOrderCreate(input: $input) {
+          userErrors {
+            field
+            message
           }
-
-          shippingAddress {
-            address1
-            address2
-            city
-            country
-            zip
-            province
-            firstName
-            lastName
-          }
-
-          lineItems(first: 50) {
-            edges {
-              node {
-                id
+          draftOrder {
+            id
+            name
+            invoiceUrl
+            createdAt
+            customer {
+              id
+              email
+              firstName
+              lastName
+            }
+            shippingAddress {
+              firstName
+              lastName
+              company
+              address1
+              address2
+              city
+              province
+              zip
+              country
+              phone
+            }
+            lineItems(first: 50) {
+              nodes {
                 title
-                name
                 quantity
-                originalUnitPrice
-                appliedDiscount {
-                  amount
-                  description
+                originalUnitPriceSet {
+                  shopMoney {
+                    amount
+                    currencyCode
+                  }
+                }
+                appliedDiscount {    
                   title
                   value
                   valueType
-                }
-                variant {
-                  id
-                  title
-                  sku
-                  price
-                  product {
-                    id
-                    title
-                    handle
+                  amountV2 {
+                    amount
+                    currencyCode
                   }
                 }
               }
+            }
+            appliedDiscount {
+              title
+              value
+              valueType
             }
           }
         }
       }
     `;
+    // Example customerId:"gid://shopify/Customer/23298585035075"
+    
+    const variables = {
+      input: {
+        customerId: draftOrder.customer.customerId, // ID cliente Shopify
+        note: `Creato attraverso API dall'utente - ${user}`,
+        tags: ["TEST-DEVELOPMENT",user],
 
-    // Check user tag that matches with the Call center that created that pre-order
-    const response = await client.request(QUERY, {
-      variables: { 
-        id: `gid://shopify/DraftOrder/${orderId}`,
-        //search: user
+        // 🔹 Line items: prodotti o articoli personalizzati
+        lineItems:draftOrder.products ,
+        shippingAddress: {
+          firstName: draftOrder.customer.name,
+          lastName: draftOrder.customer.surname,
+          company: draftOrder.customer.company,
+          address1: draftOrder.customer.address,
+          address2: draftOrder.customer.fiscalCode,
+          city: draftOrder.customer.city,
+          province: draftOrder.customer.province,
+          zip: draftOrder.customer.postalCode,
+          country: draftOrder.customer.country,
+          phone: draftOrder.customer.phone
+        },
+
+        appliedDiscount: {
+          title: draftOrder.globalDiscount.title,
+          value: draftOrder.globalDiscount.value,
+          valueType: draftOrder.globalDiscount.valueType,
+        },
+
+        presentmentCurrencyCode: "EUR"
       }
-    });
+    };
+    // valueType: "PERCENTAGE" // oppure "FIXED_AMOUNT"
 
-    return new Promise((resolve,reject)=>{
-      return resolve(response.data);
-    });
-    }catch(err){
-      return new Promise((resolve,reject)=>{
-        console.log(err)
-        return reject({error:"Cannot retrieve pre-order"});
-      });
+    console.log(variables)
+    return {Test:"TEST TTT"}
+    const response = await client.request(MUTATION, { variables });
+
+    if (response.data.draftOrderCreate.userErrors.length > 0) {
+      console.log("Errori:", response.data.draftOrderCreate.userErrors);
+      return { error: "Errore nella creazione dell'ordine" };
     }
 
-}
+    get_Cost_per_call(response);
 
+    return response.data.draftOrderCreate.draftOrder;
 
-
-// Test vari:
-const test_insert= async ()=>{
-  const data = await client.query({
-    data: {
-      "query": `mutation draftOrderCreate($input: DraftOrderInput!) {
-        draftOrderCreate(input: $input) {
-          draftOrder {
-            id
-          }
-        }
-      }`,
-      "variables": {
-          "input": {
-              "note": "Test draft order",
-              "email": "test.user@shopify.com",
-              "taxExempt": true,
-              "tags": [
-                  "foo",
-                  "App-Dev"
-              ],
-              "shippingAddress": {
-                  "address1": "123 Main St",
-                  "city": "Waterloo",
-                  "province": "Ontario",
-                  "country": "Canada",
-                  "zip": "A1A 1A1"
-              },
-              "billingAddress": {
-                  "address1": "456 Main St",
-                  "city": "Toronto",
-                  "province": "Ontario",
-                  "country": "Canada",
-                  "zip": "Z9Z 9Z9"
-              },
-              "lineItems": [
-                  {
-                      "variantId": "gid://shopify/ProductVariant/53269203452227",
-                      "quantity": 2
-                  }
-              ],
-          }
-      },
-    },
-  });
-
-  // 2️⃣ Controllo errori generali GraphQL
-  if (data.body.errors) {
-    console.log("GraphQL errors:");
-    console.log(response.body.errors);
+  } catch (err) {
+    console.log(err);
+    return { error: "Cannot create draftOrder" };
   }
-  console.log(JSON.stringify(data.body.data, null, 2));
+    /*
+    lineItems: [
+      {
+        variantId: "gid://shopify/ProductVariant/1111111111",
+        quantity: 2,
+        appliedDiscount: {        // 👈 sconto solo su questo prodotto
+          title: "Promo -10%",
+          value: 10,
+          valueType: "PERCENTAGE"
+        }
+      },
+      {
+        variantId: "gid://shopify/ProductVariant/2222222222",
+        quantity: 1,
+        appliedDiscount: {        // 👈 sconto fisso su questo prodotto
+          title: "Sconto 5€",
+          value: 5,
+          valueType: "FIXED_AMOUNT"
+        }
+      }
+      {
+        title: "Articolo personalizzato",
+        quantity: 1,
+        originalUnitPrice: 25.0,
+      }
+    ],
+    */
 }
 
 
-module.exports = {get_products,get_orders,get_ordersId, get_clients};
+module.exports = {create_clients,get_products,get_orders, get_clients, create_order};
