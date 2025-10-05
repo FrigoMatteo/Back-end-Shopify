@@ -155,7 +155,8 @@ app.post('/api/create/client',isLoggedIn ,(req,resp)=>{
 // Create a draftOrder
 app.post('/api/create/draftOrder',isLoggedIn ,(req,resp)=>{
 
-    const draftOrder=""
+    const { draftOrder } = req.body;
+    console.log("Entered before create_order")
     const data= create_order(client,draftOrder,req.user);
 
     data.then((x)=>{

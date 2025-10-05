@@ -29,9 +29,49 @@ const get_orders = async (client, user) => {
             customer {
               id
               displayName
+              emailMarketingConsent {
+                marketingState
+              }      
               email
-              phone
+              defaultEmailAddress {
+                emailAddress
+              }
+              verifiedEmail
+              defaultAddress {
+                id
+                address1
+                address2
+                company
+                city
+                province
+                country
+                zip
+                phone
+                provinceCode
+                countryCodeV2
+              }
             }
+            subtotalPriceSet {
+              shopMoney {
+                amount
+                currencyCode
+              }
+            }
+            totalPriceSet {
+              shopMoney {
+                amount
+                currencyCode
+              }
+            }
+
+            # 👇 Sconti totali (a livello ordine)
+            appliedDiscount {
+              value
+              valueType     # PERCENTAGE o FIXED_AMOUNT
+              title
+            }
+
+
             lineItems(first: 20) {
               edges {
                 node {
@@ -42,6 +82,16 @@ const get_orders = async (client, user) => {
                       amount
                     }
                   }
+                  discountedTotalSet {
+                    shopMoney {
+                      amount
+                    }
+                  }
+                  appliedDiscount {
+                    value
+                    valueType   # "PERCENTAGE" o "FIXED_AMOUNT"
+                    title
+                  }  
                   title
                   variant {
                     id
@@ -231,6 +281,9 @@ const get_clients = async (client) => {
           node {
             id
             displayName
+            emailMarketingConsent {
+              marketingState
+            }       
             defaultEmailAddress {
               emailAddress
             }
@@ -473,7 +526,8 @@ const create_order = async (client, draftOrder, user) => {
       }
     }
   `;
-
+  console.log("Entered here at least")
+  draftOrder.globalDiscount=[]
   // Costruzione variabili ordine
   const variables = {
     input: {
@@ -486,8 +540,7 @@ const create_order = async (client, draftOrder, user) => {
 
       // 🔹 Indirizzo di spedizione
       shippingAddress: {
-        firstName: draftOrder.customer.name,
-        lastName: draftOrder.customer.surname,
+        displayName: draftOrder.customer.name,
         company: draftOrder.customer.company,
         address1: draftOrder.customer.address,
         address2: draftOrder.customer.fiscalCode,
@@ -508,15 +561,17 @@ const create_order = async (client, draftOrder, user) => {
       presentmentCurrencyCode: "EUR",
     },
   };
+  console.log(variables)
+  console.log("products:",variables.input.lineItems)
+  return {error:"Blocked"}
 
   const MAX_RETRIES = 8;
   let attempt = 0;
+  
 
   while (attempt < MAX_RETRIES) {
     try {
       attempt++;
-      console.log(variables)
-      return {error:"Blocked"}
 
       const response = await client.request(MUTATION, { variables });
 
@@ -576,6 +631,11 @@ const create_order = async (client, draftOrder, user) => {
         title: "Articolo personalizzato",
         quantity: 1,
         originalUnitPrice: 25.0,
+        appliedDiscount: {        // 👈 sconto fisso su questo prodotto
+          title: "Sconto 5€",
+          value: 5,
+          valueType: "FIXED_AMOUNT"
+        },
       }
     ],
     */
