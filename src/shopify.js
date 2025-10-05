@@ -95,6 +95,8 @@ const get_orders = async (client, user) => {
 };
 
 
+
+// Create Client
 const create_clients = async (client, createClient,user) => {
     if (!user) {
       return { error: "Problema con sessione. Contatta l'amministratore" };
@@ -219,6 +221,7 @@ const create_clients = async (client, createClient,user) => {
 };
 
 
+// Get all clients
 const get_clients = async (client) => {
   const QUERY = `
     query CustomerList($first: Int!, $after: String) {
@@ -309,6 +312,8 @@ const get_clients = async (client) => {
 
   return allCustomers;
 };
+
+
 
 // --------------------------------------------------------------------------------------------------------------------
 // Consideriamo solo una viriante per prodotto, non multipli a prodotto
@@ -510,6 +515,8 @@ const create_order = async (client, draftOrder, user) => {
   while (attempt < MAX_RETRIES) {
     try {
       attempt++;
+      console.log(variables)
+      return {error:"Blocked"}
 
       const response = await client.request(MUTATION, { variables });
 
