@@ -67,7 +67,7 @@ const get_orders = async (client, user) => {
     try {
       attempt++;
       const response = await client.request(QUERY, {
-        variables: { first: 250 },
+        variables: { first: 20 },
       });
 
       get_Cost_per_call(response);
