@@ -26,6 +26,7 @@ const get_orders = async (client, user) => {
             status
             tags
             createdAt
+            invoiceUrl
             customer {
               id
               displayName
@@ -526,12 +527,38 @@ const create_order = async (client, draftOrder, user) => {
       }
     }
   `;
-  console.log("Entered here at least")
-  draftOrder.globalDiscount=[]
+
+  let customer=null
+  let customerId=null
+  console.log("Customer:",draftOrder.customer)
+  if (draftOrder.customer!=null){
+    const fullName = draftOrder.customer.name || "";
+    // Dividi in parti
+    const [firstName, ...rest] = fullName.trim().split(" ");
+
+    // Ricomponi eventuale cognome composto (es. "De Luca")
+    const lastName = rest.join(" ") || "";
+    
+    customerId=draftOrder.customer.customerId
+    customer={
+      firstName :firstName,
+      lastName :lastName,
+      company: draftOrder.customer.company,
+      address1: draftOrder.customer.address,
+      address2: draftOrder.customer.fiscalCode,
+      city: draftOrder.customer.city,
+      province: draftOrder.customer.province,
+      zip: draftOrder.customer.postalCode,
+      country: draftOrder.customer.country,
+      phone: draftOrder.customer.phone,
+    }
+  }
+
+
   // Costruzione variabili ordine
   const variables = {
     input: {
-      customerId: draftOrder.customer.customerId, // ID cliente Shopify
+      customerId: customerId, // ID cliente Shopify
       note: `Creato attraverso API dall'utente - ${user}`,
       tags: ["TEST-DEVELOPMENT", user],
 
@@ -539,17 +566,7 @@ const create_order = async (client, draftOrder, user) => {
       lineItems: draftOrder.products,
 
       // 🔹 Indirizzo di spedizione
-      shippingAddress: {
-        displayName: draftOrder.customer.name,
-        company: draftOrder.customer.company,
-        address1: draftOrder.customer.address,
-        address2: draftOrder.customer.fiscalCode,
-        city: draftOrder.customer.city,
-        province: draftOrder.customer.province,
-        zip: draftOrder.customer.postalCode,
-        country: draftOrder.customer.country,
-        phone: draftOrder.customer.phone,
-      },
+      shippingAddress: customer,
 
       // 🔹 Sconto globale
       appliedDiscount: {
@@ -563,7 +580,6 @@ const create_order = async (client, draftOrder, user) => {
   };
   console.log(variables)
   console.log("products:",variables.input.lineItems)
-  return {error:"Blocked"}
 
   const MAX_RETRIES = 8;
   let attempt = 0;
