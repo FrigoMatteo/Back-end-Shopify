@@ -1,5 +1,5 @@
 const node=require ('@shopify/shopify-api/adapters/node');
-const { shopifyApi,LATEST_API_VERSION}=require( '@shopify/shopify-api');
+const { shopifyApi,ApiVersion}=require( '@shopify/shopify-api');
 const express=require( "express");
 const {check,validationResult}=require('express-validator');
 const dotenv= require( "dotenv");
@@ -51,7 +51,7 @@ const shopify = shopifyApi({
   apiKey: process.env.SHOPIFY_API_KEY,
   apiSecretKey: process.env.SHOPIFY_API_SECRET,
   hostName: process.env.HOST.replace(/https?:\/\//, ""),
-  apiVersion: LATEST_API_VERSION,
+  apiVersion: ApiVersion.July25,
 });
 
 const session = {
