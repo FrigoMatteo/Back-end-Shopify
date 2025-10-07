@@ -19,9 +19,6 @@ app.use(express.urlencoded({ extended: true }));
 
 const allowedOrigins = [
   "https://hustleproductioncallmanagement.vercel.app", // produzione
-  "http://localhost:10001",
-  "https://hustleproductioncallmanagement.onrender.com",
-  "http://localhost:5173"
 ];
 
 app.use(cors({

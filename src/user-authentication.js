@@ -61,7 +61,7 @@ const initAuthentication=(app) =>{
       mongoUrl: mongoUrl, // es: mongodb+srv://user:pass@cluster/dbname
       dbName: process.env.DBNAME,            // il tuo database
       collectionName: "sessions",
-      ttl: 60 * 20 * 1,  // TTL = 10 ore (in secondi)
+      ttl: 60 * 60 * 10,  // TTL = 10 ore (in secondi)
       autoRemove: 'native' // fa pulizia delle sessioni scadute
     }),
     cookie: {
@@ -69,7 +69,7 @@ const initAuthentication=(app) =>{
       httpOnly: true,
       sameSite:process.env.NODE_ENV === "production" ? "none" : "lax",
       //domain: process.env.NODE_ENV === "production" ? "backendshopifyhustleproduction.onrender.com" : "",
-      maxAge: 1000 * 60 * 20 * 1 // 10 ore (in ms)
+      maxAge: 1000 * 60 * 60 * 10 // 10 ore (in ms)
     }
   }));
 
