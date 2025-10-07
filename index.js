@@ -7,7 +7,7 @@ const morgan = require('morgan');
 const passport = require('passport');
 
 
-const {initAuthentication,isLoggedIn} = require('./src/user-authentication');
+const {initAuthentication,isLoggedIn,checkLogin} = require('./src/user-authentication');
 const {get_orders,get_products,get_clients,create_clients, create_order} = require('./src/shopify.js');
 dotenv.config();
 const app = express();
@@ -81,8 +81,16 @@ const client = new shopify.clients.Graphql({session});
 app.post('/api/session/login', 
   [
     check("username").notEmpty().isString().withMessage("Missing username"),
-    check("password").notEmpty().isString().withMessage("Missing password")
-  ]
+    check("password").notEmpty().isString().withMessage("Missing password"),
+    (req, res, next) => {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return res.status(400).json({ errors: errors.array() });
+      }
+      next(); // passa a checkLogin
+    },
+  ],
+  checkLogin
   ,function (req,resp,next){
 
     passport.authenticate('local',(err,user,info)=>{
@@ -103,7 +111,6 @@ app.post('/api/session/login',
                     return resp.status(500).json({ error: "Session save failed" });
                   }
 
-                  console.log("Sessione salvata correttamente, cookie dovrebbe essere inviato");
                   return resp.json({ username: user.username });
                 });
             });

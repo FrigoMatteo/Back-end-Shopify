@@ -4,6 +4,7 @@ const passport = require("passport");
 const session = require("express-session");
 const MongoStore = require("connect-mongo");
 const LocalStrategy = require("passport-local").Strategy;
+const { checkLoginAttempt, registerFailedAttempt, resetAttempts }=require("./loginRateLimiter.js")
 dotenv.config();
 
 const { MongoClient, ServerApiVersion } = require('mongodb');
@@ -15,7 +16,7 @@ const db = new MongoClient(uri, {
     deprecationErrors: true,
   }
 });
-
+let dbInstance;
 
 
 const initAuthentication=(app) =>{
@@ -32,7 +33,7 @@ const initAuthentication=(app) =>{
   ));
 
   passport.serializeUser((user, done) => {
-      console.log("Serialize:",user.username)
+      console.log("Entered:",user.username)
       done(null, user.username); // Salva solo l’ID nella sessione
   });
   
@@ -81,9 +82,8 @@ const initAuthentication=(app) =>{
 const getUser=async (username, password)=>{
   
     try{
-        await db.connect();
+        const database = await connectDB();
         
-        const database= db.db(process.env.DBNAME);
         const collection=database.collection("users");
         const get=await collection.findOne({
             username:username
@@ -97,24 +97,25 @@ const getUser=async (username, password)=>{
 
         const salt=get.salt
         return new Promise((resolve,reject)=>{
-          crypto.scrypt(password, salt, 32, (err, hashedPassword) => {
+          crypto.scrypt(password, salt, 32, async (err, hashedPassword) => {
               if (err) reject(err);
 
               // We create an array buffer, taking input hex of password
               const passwordHex = Buffer.from(get.password,'hex');
               
-              if(!crypto.timingSafeEqual(passwordHex, hashedPassword))
+              if(!crypto.timingSafeEqual(passwordHex, hashedPassword)){
+                  await registerFailedAttempt(database, get.username);
                   reject({error:"Username and password incorrect"});
-              else
-                  resolve(get);
+              }else{
+                await resetAttempts(database, get.username);
+                resolve(get);
+              }  
           });
         });
 
 
     }catch(error){
         console.error(error);
-    }finally{
-        await db.close();
     }
 
 }
@@ -128,6 +129,33 @@ const isLoggedIn = (req, res, next) => {
   return res.status(401).json({ error: 'Sessione scaduta. Aggiorna la pagina' });
 }
 
+const connectDB= async ()=>{
+  if (!dbInstance) {
+    await db.connect();
+    dbInstance = db.db(process.env.DBNAME);
+  }
+  return dbInstance;
+}
+
+const checkLogin = async (req, res, next) => {
+
+  try{
+    const db = await connectDB();
+    const username=req.body.username
+    const status = await checkLoginAttempt(db, username);
+    if (!status.allowed) {
+      return res.status(429).json({
+        error: `Troppi tentativi, riprova tra ${Math.ceil(status.remaining / 1000)}s`
+      });
+    }else{
+      return next();
+    }
+  }catch(err){
+    console.error("CheckLogin:",err);
+  }
+}
 
 
-module.exports = { initAuthentication,isLoggedIn };
+
+
+module.exports = { initAuthentication,isLoggedIn, checkLogin};

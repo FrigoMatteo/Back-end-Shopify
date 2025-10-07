@@ -121,7 +121,6 @@ const get_orders = async (client, user) => {
         variables: { first: 20 },
       });
 
-      get_Cost_per_call(response);
       return response.data; // ✅ success → esce dal while
 
     } catch (err) {
@@ -236,7 +235,6 @@ const create_clients = async (client, createClient,user) => {
           return { error: "Cliente già esistente" };
         }
 
-        return {error:"Blocked"}
         // Se non esiste, crea il cliente
         const response = await client.request(MUTATION, { variables });
 
@@ -248,7 +246,6 @@ const create_clients = async (client, createClient,user) => {
           };
         }
 
-        get_Cost_per_call(response);
         return response.data.customerCreate.customer; // ✅ successo
 
       } catch (err) {
@@ -328,8 +325,6 @@ const get_clients = async (client) => {
         const response = await client.request(QUERY, {
           variables: { first: 250, after },
         });
-
-        get_Cost_per_call(response);
 
         const { edges, pageInfo } = response.data.customers;
         if (!edges || edges.length === 0) break;
@@ -424,8 +419,6 @@ const get_products = async (client) => {
         const response = await client.request(QUERY, {
           variables: { first: 250, after },
         });
-
-        get_Cost_per_call(response);
 
         const { edges, pageInfo } = response.data.products;
         if (!edges || edges.length === 0) break;
@@ -530,7 +523,6 @@ const create_order = async (client, draftOrder, user) => {
 
   let customer=null
   let customerId=null
-  console.log("Customer:",draftOrder.customer)
   if (draftOrder.customer!=null){
     const fullName = draftOrder.customer.name || "";
     // Dividi in parti
@@ -578,8 +570,6 @@ const create_order = async (client, draftOrder, user) => {
       presentmentCurrencyCode: "EUR",
     },
   };
-  console.log(variables)
-  console.log("products:",variables.input.lineItems)
 
   const MAX_RETRIES = 8;
   let attempt = 0;
@@ -596,9 +586,6 @@ const create_order = async (client, draftOrder, user) => {
         console.log("Errori:", response.data.draftOrderCreate.userErrors);
         return { error: "Errore nella creazione dell'ordine. Se persiste contatta l'amministratore" };
       }
-
-      // Log del costo per chiamata
-      get_Cost_per_call(response);
 
       // Tutto ok → ritorna l’ordine creato
       return response.data.draftOrderCreate.draftOrder;
