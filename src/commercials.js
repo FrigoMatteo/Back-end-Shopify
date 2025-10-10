@@ -7,6 +7,7 @@ require('dotenv').config();
 const uri = `mongodb+srv://${process.env.COM_USER}:${process.env.PASS_COM}@cluster0.now2bqv.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
 const client = new MongoClient(uri, { serverApi: { version: ServerApiVersion.v1 } });
 let collection;
+let collectionSession;
 
 
 const initDB=async()=>{
@@ -15,6 +16,14 @@ const initDB=async()=>{
     const database = client.db('hustleProduction');
     collection = database.collection('users');
     await collection.createIndex({ username: 1 }, { unique: true });
+  }
+}
+
+const initDBSession=async()=>{
+  if (!collectionSession) {
+    await client.connect();
+    const database = client.db('hustleProduction');
+    collectionSession = database.collection('sessions');
   }
 }
 
@@ -73,6 +82,18 @@ const visualizeUsers=async()=>{
 const eliminateUser=async(username)=> {
   if (!username) return { success: false, message: 'Username richiesto' };
   await initDB();
+
+  await initDBSession()
+
+  const deleteSessions = await collectionSession.deleteMany({
+    'session': { $regex: username }
+  });
+  console.log("Delete:",deleteSessions)
+
+  if (!deleteSessions.acknowledged) {
+    return { success: true, message: 'Utente eliminato ma errore durante la rimozione delle sessioni attive.' };
+  }
+
   const result = await collection.deleteOne({ username });
   return result.deletedCount === 1
     ? { success: true, message: 'Utente eliminato' }
