@@ -17,8 +17,8 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 const get_orders = async (client, user) => {
   const QUERY = `
-    query getDraftOrders($first: Int!) {
-      draftOrders(first: $first, reverse: true) {
+    query getDraftOrders($first: Int!,$query: String!) {
+      draftOrders(first: $first, reverse: true,query: $query) {
         edges {
           node {
             id
@@ -118,7 +118,7 @@ const get_orders = async (client, user) => {
     try {
       attempt++;
       const response = await client.request(QUERY, {
-        variables: { first: 20 },
+        variables: { first: 20 ,query: `tag:${user}`},
       });
 
       return response.data; // ✅ success → esce dal while
