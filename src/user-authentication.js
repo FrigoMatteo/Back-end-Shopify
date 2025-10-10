@@ -155,7 +155,17 @@ const checkLogin = async (req, res, next) => {
   }
 }
 
+const isNicola = (req, res, next) => {
+
+  if (req.isAuthenticated()) {
+    console.log(req.user)
+    if (req.user=="Nicola" || req.user=="MatteoFrigo"){
+      return next();
+    }
+  }
+  return res.status(401).json({ error: 'Non autenticato' });
+}
 
 
 
-module.exports = { initAuthentication,isLoggedIn, checkLogin};
+module.exports = { isNicola, initAuthentication,isLoggedIn, checkLogin};

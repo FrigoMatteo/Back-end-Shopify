@@ -7,7 +7,8 @@ const morgan = require('morgan');
 const passport = require('passport');
 
 
-const {initAuthentication,isLoggedIn,checkLogin} = require('./src/user-authentication');
+const {initAuthentication,isLoggedIn,checkLogin,isNicola} = require('./src/user-authentication');
+const {createUser, visualizeUsers, eliminateUser,changePassword} = require('./src/commercials.js');
 const {get_orders,get_products,get_clients,create_clients, create_order} = require('./src/shopify.js');
 dotenv.config();
 const app = express();
@@ -19,6 +20,7 @@ app.use(express.urlencoded({ extended: true }));
 
 const allowedOrigins = [
   "https://hustleproductioncallmanagement.vercel.app", // produzione
+  "http://localhost:5173",
 ];
 
 app.use(cors({
@@ -123,6 +125,70 @@ app.get('/api/session/current', (req, res) => {
     res.status(200).json({username:req.user});
   }else
     res.status(401).json({error: 'Unauthenticated user!'});;
+});
+
+
+// create a commercial
+app.post('/api/createCom/create',isNicola ,(req,resp)=>{
+    const { comUsername,comPassword } = req.body;
+    const data= createUser(comUsername,comPassword);
+
+    data.then((x)=>{
+
+      resp.json(x);
+    }).catch((x)=>{
+      console.log("Error creating commercial")
+      resp.status(500).json(x);
+    })
+
+});
+
+// get list of commercials
+app.get('/api/createCom/list',isNicola ,(req,resp)=>{
+
+    const data= visualizeUsers();
+
+    data.then((x)=>{
+
+      resp.json(x);
+    }).catch((x)=>{
+      console.log("Error retrieving commercials")
+      resp.status(500).json(x);
+    })
+
+});
+
+// remove a commercial
+app.delete('/api/createCom/delete',isNicola ,(req,resp)=>{
+  
+    const { comUsername } = req.body;
+    const data= eliminateUser(comUsername);
+
+    data.then((x)=>{
+
+      resp.json(x);
+    }).catch((x)=>{
+      console.log("Error deleting commercial")
+      resp.status(500).json(x);
+    })
+
+});
+
+
+// remove a commercial
+app.post('/api/createCom/change',isNicola ,(req,resp)=>{
+  
+    const { comUsername,password,newPassword } = req.body;
+    const data= changePassword(comUsername,password,newPassword);
+
+    data.then((x)=>{
+
+      resp.json(x);
+    }).catch((x)=>{
+      console.log("Error modifying commercial")
+      resp.status(500).json(x);
+    })
+
 });
 
 // Retrieve own pre-orders

@@ -177,16 +177,23 @@ const create_clients = async (client, createClient,user) => {
           customer {
             id
             email
-            firstName
-            lastName
-            note 
-            addresses {
+            displayName
+            defaultEmailAddress {
+              emailAddress
+            }
+            verifiedEmail
+            defaultAddress {
               id
               address1
+              address2
+              company
               city
-              zip
               province
               country
+              zip
+              phone
+              provinceCode
+              countryCodeV2
             }
           }
         }
