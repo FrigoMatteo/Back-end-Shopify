@@ -82,13 +82,6 @@ app.listen(port, (err) => {
     console.log(`Server listening at ${port}`);
 }); 
 
-
-
-app.listen(port, (err) => {
-  if (err) console.log(err);
-  else console.log(`Server listening at ${port}`);
-});
-
 // === LOGIN === //
 app.post(
   "/api/session/login",
