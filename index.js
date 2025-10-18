@@ -1,20 +1,35 @@
 const node=require ('@shopify/shopify-api/adapters/node');
 const { shopifyApi,ApiVersion}=require( '@shopify/shopify-api');
-const express=require( "express");
-const {check,validationResult}=require('express-validator');
-const dotenv= require( "dotenv");
-const morgan = require('morgan');
-const passport = require('passport');
+const express = require("express");
+const { check, validationResult } = require("express-validator");
+const dotenv = require("dotenv");
+const morgan = require("morgan");
+const cors = require("cors");
 
+const {
+  loginUser,
+  verifyToken,
+  isNicola,
+  checkLogin,
+} = require("./src/user-authentication");
+const {
+  createUser,
+  visualizeUsers,
+  eliminateUser,
+  changePassword,
+} = require("./src/commercials.js");
+const {
+  get_orders,
+  get_products,
+  get_clients,
+  create_clients,
+  create_order,
+} = require("./src/shopify.js");
 
-const {initAuthentication,isLoggedIn,checkLogin,isNicola} = require('./src/user-authentication');
-const {createUser, visualizeUsers, eliminateUser,changePassword} = require('./src/commercials.js');
-const {get_orders,get_products,get_clients,create_clients, create_order} = require('./src/shopify.js');
 dotenv.config();
 const app = express();
 app.use(express.json());
-app.use(morgan('dev'));
-const cors = require('cors');
+app.use(morgan("dev"));
 app.use(express.urlencoded({ extended: true }));
 
 
@@ -56,6 +71,7 @@ const session = {
   shop: process.env.SHOPIFY_SHOP,
   accessToken: process.env.SHOPIFY_ADMIN_API_TOKEN,
 };
+const client = new shopify.clients.Graphql({session});
 
 
 // activate the server
@@ -66,17 +82,16 @@ app.listen(port, (err) => {
     console.log(`Server listening at ${port}`);
 }); 
 
-// Initialize session
-initAuthentication(app)
-// Initialize client Shopify
-const client = new shopify.clients.Graphql({session});
 
 
+app.listen(port, (err) => {
+  if (err) console.log(err);
+  else console.log(`Server listening at ${port}`);
+});
 
-// --------------------Back-end Requests------------------------------------------------------------------------------------
-
-// Login
-app.post('/api/session/login', 
+// === LOGIN === //
+app.post(
+  "/api/session/login",
   [
     check("username").notEmpty().isString().withMessage("Missing username"),
     check("password").notEmpty().isString().withMessage("Missing password"),
@@ -85,205 +100,92 @@ app.post('/api/session/login',
       if (!errors.isEmpty()) {
         return res.status(400).json({ errors: errors.array() });
       }
-      next(); // passa a checkLogin
+      next();
     },
   ],
-  checkLogin
-  ,function (req,resp,next){
+  checkLogin,
+  async (req, res) => {
+    try {
+      const { username, password } = req.body;
+      const data = await loginUser(username, password);
+      return res.json(data); // contiene { token, username }
+    } catch (err) {
+      return res.status(401).json(err);
+    }
+  }
+);
 
-    passport.authenticate('local',(err,user,info)=>{
-        if (err){
-            console.log("info:",info);
-            console.log("error:",err);
-            return next(err);
-        }
-        else{
-            if (!user){
-                return resp.status(401).json(info)
-            }
-            req.login(user, (err) =>{
-                
-                req.session.save((err) => {
-                  if (err) {
-                    console.error("Errore salvataggio sessione:", err);
-                    return resp.status(500).json({ error: "Session save failed" });
-                  }
-
-                  return resp.json({ username: user.username });
-                });
-            });
-        }
-            
-    })(req,resp,next);
-
+// === VERIFICA TOKEN === //
+app.get("/api/session/current", verifyToken, (req, res) => {
+  res.status(200).json({ username: req.user.username });
 });
 
-// Did it already login
-app.get('/api/session/current', (req, res) => {  
-  if(req.isAuthenticated()) {
-    res.status(200).json({username:req.user});
-  }else
-    res.status(401).json({error: 'Unauthenticated user!'});;
+// === LOGOUT (simbolico) === //
+app.delete("/api/session/logout", (req, res) => {
+  // lato client basta cancellare il token, ma rispondiamo OK per coerenza
+  return res.sendStatus(200);
 });
 
-
-// create a commercial
-app.post('/api/createCom/create',isNicola ,(req,resp)=>{
-    const { comUsername,comPassword } = req.body;
-    const data= createUser(comUsername,comPassword);
-
-    data.then((x)=>{
-
-      resp.json(x);
-    }).catch((x)=>{
-      console.log("Error creating commercial")
-      resp.status(500).json(x);
-    })
-
+// === ROTTE PROTETTE === //
+app.post("/api/createCom/create", verifyToken, isNicola, (req, res) => {
+  const { comUsername, comPassword } = req.body;
+  createUser(comUsername, comPassword)
+    .then((x) => res.json(x))
+    .catch((err) => res.status(500).json(err));
 });
 
-// get list of commercials
-app.get('/api/createCom/list',isNicola ,(req,resp)=>{
-
-    const data= visualizeUsers();
-
-    data.then((x)=>{
-
-      resp.json(x);
-    }).catch((x)=>{
-      console.log("Error retrieving commercials")
-      resp.status(500).json(x);
-    })
-
+app.get("/api/createCom/list", verifyToken, isNicola, (req, res) => {
+  visualizeUsers()
+    .then((x) => res.json(x))
+    .catch((err) => res.status(500).json(err));
 });
 
-// remove a commercial
-app.delete('/api/createCom/delete',isNicola ,(req,resp)=>{
-  
-    const { comUsername } = req.body;
-    const data= eliminateUser(comUsername);
-
-    data.then((x)=>{
-
-      resp.json(x);
-    }).catch((x)=>{
-      console.log("Error deleting commercial")
-      resp.status(500).json(x);
-    })
-
+app.delete("/api/createCom/delete", verifyToken, isNicola, (req, res) => {
+  const { comUsername } = req.body;
+  eliminateUser(comUsername)
+    .then((x) => res.json(x))
+    .catch((err) => res.status(500).json(err));
 });
 
-
-// remove a commercial
-app.post('/api/createCom/change',isNicola ,(req,resp)=>{
-  
-    const { comUsername,password,newPassword } = req.body;
-    const data= changePassword(comUsername,password,newPassword);
-
-    data.then((x)=>{
-
-      resp.json(x);
-    }).catch((x)=>{
-      console.log("Error modifying commercial")
-      resp.status(500).json(x);
-    })
-
+app.post("/api/createCom/change", verifyToken, isNicola, (req, res) => {
+  const { comUsername, password, newPassword } = req.body;
+  changePassword(comUsername, password, newPassword)
+    .then((x) => res.json(x))
+    .catch((err) => res.status(500).json(err));
 });
 
-// Retrieve own pre-orders
-app.get('/api/orders',isLoggedIn ,(req,resp)=>{
-
-    const data= get_orders(client,req.user);
-
-    data.then((x)=>{
-
-      resp.json(x);
-    }).catch((x)=>{
-      console.log("Error retrieving")
-      resp.status(500).json(x);
-    })
-
+app.get("/api/orders", verifyToken, (req, res) => {
+  get_orders(client, req.user.username)
+    .then((x) => res.json(x))
+    .catch((err) => res.status(500).json(err));
 });
 
-// Create a client
-app.post('/api/create/client',isLoggedIn ,(req,resp)=>{
-
-    const { customer } = req.body;
-    const data= create_clients(client,customer,req.user);
-
-    data.then((x)=>{
-
-      resp.json(x);
-    }).catch((x)=>{
-      console.log("Error creating")
-      resp.status(500).json(x);
-    })
-
+app.post("/api/create/client", verifyToken, (req, res) => {
+  const { customer } = req.body;
+  create_clients(client, customer, req.user.username)
+    .then((x) => res.json(x))
+    .catch((err) => res.status(500).json(err));
 });
 
-// Create a draftOrder
-app.post('/api/create/draftOrder',isLoggedIn ,(req,resp)=>{
-
-    const { draftOrder } = req.body;
-
-    const data= create_order(client,draftOrder,req.user);
-
-    data.then((x)=>{
-
-      resp.json(x);
-    }).catch((x)=>{
-      console.log("Error creating")
-      resp.status(500).json(x);
-    })
-
+app.post("/api/create/draftOrder", verifyToken, (req, res) => {
+  const { draftOrder } = req.body;
+  create_order(client, draftOrder, req.user.username)
+    .then((x) => res.json(x))
+    .catch((err) => res.status(500).json(err));
 });
 
-
-// Retrieve clients
-app.get('/api/clients',isLoggedIn ,(req,resp)=>{
-
-    const data= get_clients(client);
-
-    data.then((x)=>{
-
-      resp.json(x);
-    }).catch((x)=>{
-      console.log("Error retrieving")
-      resp.status(500).json(x);
-    })
-
+app.get("/api/clients", verifyToken, (req, res) => {
+  get_clients(client)
+    .then((x) => res.json(x))
+    .catch((err) => res.status(500).json(err));
 });
 
-
-// Retrieve own pre-orders
-app.get('/api/products',isLoggedIn ,(req,resp)=>{
-
-    const data= get_products(client);
-
-    data.then((x)=>{
-
-      resp.json(x);
-    }).catch((x)=>{
-      console.log("Error retrieving")
-      resp.status(500).json(x);
-    })
-
+app.get("/api/products", verifyToken, (req, res) => {
+  get_products(client)
+    .then((x) => res.json(x))
+    .catch((err) => res.status(500).json(err));
 });
 
-app.get('/' ,(req,resp)=>{
-
-  resp.json('Dont tell anyone');
-
-});
-
-//logout
-app.delete('/api/session/logout', (req, res, next) => {
-  req.logout(err => {
-    if (err) return next(err);
-    req.session.destroy(err => {
-      if (err) return next(err);
-      res.clearCookie("connect.sid"); // cancella il cookie lato client
-      return res.sendStatus(200);
-    });
-  });
+app.get("/", (req, res) => {
+  res.json("Dont tell anyone");
 });
